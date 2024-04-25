@@ -25,7 +25,7 @@ class PatientDialog(QtWidgets.QDialog):
 
         self.phone = QtWidgets.QLineEdit(self)
         self.phone.setPlaceholderText("Телефон")
-        self.phone.setInputMask("+7(999)999-99-99")
+        self.phone.setInputMask("+996(999)99-99-99")
 
         self.sex = QtWidgets.QComboBox(self)
         self.sex.addItems(["М", "Ж"])

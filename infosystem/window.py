@@ -1,12 +1,13 @@
-from PyQt6 import QtGui, QtWidgets
+from PyQt6 import QtGui, QtWidgets, QtCore
 from PyQt6.QtWidgets import QWidget
-from PyQt6.QtWidgets import QTextEdit
+from PyQt6.QtWidgets import QTextEdit, QWidget, QVBoxLayout, QLabel
+from PyQt6.QtGui import QPixmap
+import os
 
 from .appointment_dialog import AppointmentDialog
 from .database import DataBase
 from .doctor_card import DoctorDialog
 from .patient_card import PatientDialog
-
 
 # Класс главного окна информационной системы
 class MainWindow(QtWidgets.QMainWindow):
@@ -32,17 +33,40 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # О программе
     def _about(self) -> QWidget:
-        tab = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout()
+        tab = QtWidgets.QWidget()  # Создаем виджет вкладки
+        layout = QVBoxLayout()  # Создаем вертикальный макет
 
-        # Создаем QTextEdit с вашим текстом
+        # Создаем QTextEdit для текста
         about_text = QTextEdit()
-        about_text.setPlainText("Акматалиев Камчыбек Капарович - ПОВ(б)-1-20")
-        about_text.setReadOnly(True)  # чтобы текст был доступен только для чтения
+        about_text.setPlainText("Акматалиев Камчыбек Капарович - ПОВ(б)-1-20 - kamcybekakmataliev6@gmail.com")
+        about_text.setReadOnly(True)  # Делает текст только для чтения
 
+        # Создаем QLabel для изображения
+        image_label = QLabel()  # Виджет для отображения изображения
+        image_path = r"C:\Users\begis\Downloads\Telegram Desktop\Pyqt приложение\infosystem\01.jpg"  # Замените на действительный путь
+
+        absolute_path = os.path.abspath(image_path)
+
+        print("Абсолютный путь:", absolute_path)
+
+        if not os.path.exists(image_path):  # Проверка существования файла
+            about_text.append("Изображение не найдено")  # Добавляет сообщение, если изображение не найдено
+        else:
+            pixmap = QPixmap(image_path)  # Загрузка изображения
+            if pixmap.isNull():  # Проверка, удалось ли загрузить изображение
+                about_text.append("Ошибка загрузки изображения")  # Сообщение, если изображение не удалось загрузить
+            else:
+                # Используем правильный импорт Qt для масштабирования изображения
+                scaled_pixmap = pixmap.scaled(500, 500, QtCore.Qt.AspectRatioMode.KeepAspectRatio)
+                image_label.setPixmap(scaled_pixmap)  # Устанавливаем пиксмап в QLabel
+
+        # Добавляем виджеты в макет
         layout.addWidget(about_text)
-        tab.setLayout(layout)
-        return tab
+        if not image_label.pixmap().isNull():  # Добавляем виджет с изображением только если оно загрузилось
+            layout.addWidget(image_label)
+
+        tab.setLayout(layout)  # Устанавливаем макет
+        return tab  # Возвращаем виджет
 
     # Создание вкладки "Врачи"
     def _create_doctors_tab(self) -> QWidget:
@@ -287,15 +311,25 @@ class MainWindow(QtWidgets.QMainWindow):
             self.update_appointments_table()
 
     # Обновление таблицы "Приемы"
-    def update_appointments_table(self) -> None:
+    def update_appointments_table(self):
         self.model_appointment.clear()
         self.model_appointment.setHorizontalHeaderLabels(
             ["ID", "Пациент", "Доктор", "Дата", "Время"]
         )
         for appointment in self.db.get_appointments():
-            id, patient, doctor, date, time = appointment
-            patient = self.db.get_patient(patient)["name"]
-            doctor = self.db.get_doctor(doctor)["name"]
+            id, patient_id, doctor_id, date, time = appointment
+
+            patient_data = self.db.get_patient(patient_id)
+            doctor_data = self.db.get_doctor(doctor_id)
+
+            # Ensure that patient and doctor are found
+            if patient_data is None or doctor_data is None:
+                # Handle the error (e.g., log it, skip this appointment, etc.)
+                continue
+
+            patient = patient_data.get("name", "Unknown Patient")
+            doctor = doctor_data.get("name", "Unknown Doctor")
+
             row = [
                 QtGui.QStandardItem(str(id)),
                 QtGui.QStandardItem(patient),
@@ -304,4 +338,3 @@ class MainWindow(QtWidgets.QMainWindow):
                 QtGui.QStandardItem(time),
             ]
             self.model_appointment.appendRow(row)
-        self.table_appointments.setModel(self.model_appointment)
